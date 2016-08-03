@@ -120,7 +120,7 @@ function rs_rise_post()
         //ЧТЕНИЕ ИЗ ВЕБ АРХИВА СТРАНИЦЫ И ЕЕ ПАРСИНГ
 
         //Если востанавливаеем картинки
-        if (in_array($_POST['type_file'], array('image/jpeg', 'image/png'))) {
+        if (in_array($_POST['type_file'], array('image/jpeg', 'image/png', 'image/gif'))) {
 
             if (strpos($_POST['rs_url_page'], 'wp-content/uploads')) {
 
@@ -605,6 +605,7 @@ function rs_settings()
         update_option('rs_is_302_broken_links', $_POST['rs_is_302_broken_links']);
         update_option('rs_is_detect_broken_images', $_POST['rs_is_detect_broken_images']);
         update_option('rs_is_localhost', $_POST['rs_is_localhost']);
+        update_option('rs_is_checker_on', $_POST['rs_is_checker_on']);
     }
 
     // Если в базе нет настроек, то будут установлены по умолчанию
@@ -626,6 +627,7 @@ function rs_settings()
     add_option('rs_is_302_broken_links', '', '', 'no');
     add_option('rs_is_detect_broken_images', '', '', 'no');
     add_option('rs_is_localhost', '', '', 'no');
+    add_option('rs_is_checker_on', '', '', 'no');
 
     echo "<style>.rs_list input[type='text'] {width: 400px;}</style>
     <form method='POST' class='rs_list'>
@@ -772,6 +774,14 @@ function rs_settings()
 						</label>
 					</td>
 				</tr>
+				<tr>
+					<td colspan='2'>
+						<label>
+						<input name='rs_is_checker_on' id='rs_is_checker_on' type='checkbox' " . (get_option('rs_is_checker_on') ? 'checked=\'checked\'' : '') . " />
+						Включить вывод информации в консоль о битых ссылках и картинках при просмотре страниц на востанавливаемом сайте
+						</label>
+					</td>
+				</tr>
 
 				
 				<tr>
@@ -824,6 +834,15 @@ function rs_open_url($url)
         }
     }
     return 'не найден домен';
+}
+
+//******************************************************************************************************************************************************
+if (get_option('rs_is_checker_on')) {
+        add_action('wp_footer', 'function_add_checker');
+
+        function function_add_checker() {
+            wp_enqueue_script('add_checker', plugins_url('linksChecker.js', __FILE__));
+        }
 }
 
 //******************************************************************************************************************************************************
