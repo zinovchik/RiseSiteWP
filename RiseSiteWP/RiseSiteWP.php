@@ -5,10 +5,10 @@
  */
 /*
 Plugin Name: RiseSiteWP
-Plugin URI: https://wordpress.org/plugins/RiseSiteWP/
+Plugin URI: https://github.com/zinovchik/RiseSiteWP
 Description: This is a plugin for rise post from WebArchive.
 Author: Maxim Zinovchik
-Version: 2.0
+Version: 1.0
 */
 
 
@@ -219,6 +219,7 @@ function rs_rise_post()
             $rs_content_path = get_option('rs_content_path');
 //        $rs_get_category = get_option('rs_get_category');
             $rs_category_path = get_option('rs_category_path');
+            $rs_tag_path = get_option('rs_tag_path');
             $rs_is_localhost = get_option('rs_is_localhost');
 
             $html = file_get_html("http://web.archive.org/web/$_POST[rs_version_date]/$_POST[rs_url_page]");
@@ -277,6 +278,47 @@ function rs_rise_post()
             }
             $e2 = implode(',', $e2);
             echo "<label>Category id <input name='rs_category' style='display: block;margin: 10px 0;width: 99%; border:1px solid #777;' value='$e2' /></label>";
+
+
+
+            //**************
+
+            foreach ($html->find($rs_tag_path) as $e) {
+                $tags[] = $e->plaintext;
+            }
+
+//            $e = '';
+//            $args = array(
+//                'hide_empty' => 0,
+//                'type' => 'post'
+//            );
+//            $tags = get_tags($args);
+//            foreach ($tags as $tag) {
+//                $e[$tag->term_id] = $tag->name;
+//            }
+
+
+//            foreach ($e1 as $value) {
+//
+//                if (in_array($value, $e)) {
+//                    $e = array_flip($e);
+//                    $e2[] = $e[$value];
+//                    $e = array_flip($e);
+//                } else {
+//                    $my_tag = array('cat_name' => $value);
+//                    // Create the tag
+//                    echo '<br><span class="rs_ok">* create new tag id = ';
+//                    echo $e2[] = wp_insert_category($my_cat);
+//                    echo ', Name = ' . $value . '</span><br>';
+//                }
+//            }
+            $e2 = implode(',', $tags);
+            echo "<label>Tags <input name='rs_tag' style='display: block;margin: 10px 0;width: 99%; border:1px solid #777;' value='$e2' /></label>";
+
+            //**************
+
+
+
 
             $rs_content = $html->find($rs_content_path, 0);
 
@@ -450,6 +492,9 @@ function rs_rise_post()
         ));
 
         if ($rs_id) {
+            if($_POST['rs_tag']) {
+                wp_set_post_tags($rs_id, $_POST['rs_tag'], true);
+            }
             wp_redirect(get_site_url() . "/wp-admin/post.php?post=$rs_id&action=edit");
             exit;
         } else {
@@ -598,6 +643,8 @@ function rs_settings()
         update_option('rs_content_path', $_POST['rs_content_path']);
         update_option('rs_get_category', $_POST['rs_get_category']);
         update_option('rs_category_path', $_POST['rs_category_path']);
+        update_option('rs_get_tag', $_POST['rs_get_tag']);
+        update_option('rs_tag_path', $_POST['rs_tag_path']);
         update_option('rs_del_get_parameter', $_POST['rs_del_get_parameter']);
         update_option('rs_auto_select_version', $_POST['rs_auto_select_version']);
         update_option('rs_is_detect_broken_links', $_POST['rs_is_detect_broken_links']);
@@ -605,7 +652,6 @@ function rs_settings()
         update_option('rs_is_302_broken_links', $_POST['rs_is_302_broken_links']);
         update_option('rs_is_detect_broken_images', $_POST['rs_is_detect_broken_images']);
         update_option('rs_is_localhost', $_POST['rs_is_localhost']);
-        update_option('rs_is_checker_on', $_POST['rs_is_checker_on']);
     }
 
     // Если в базе нет настроек, то будут установлены по умолчанию
@@ -620,6 +666,8 @@ function rs_settings()
     add_option('rs_content_path', '.post-body', '', 'no');
     add_option('rs_get_category', 'on', '', 'no');
     add_option('rs_category_path', '.post-labels a', '', 'no');
+    add_option('rs_get_tag', '', '', 'no');
+    add_option('rs_tag_path', '', '', 'no');
     add_option('rs_del_get_parameter', '', '', 'no');
     add_option('rs_auto_select_version', '', '', 'no');
     add_option('rs_is_detect_broken_links', '', '', 'no');
@@ -627,7 +675,6 @@ function rs_settings()
     add_option('rs_is_302_broken_links', '', '', 'no');
     add_option('rs_is_detect_broken_images', '', '', 'no');
     add_option('rs_is_localhost', '', '', 'no');
-    add_option('rs_is_checker_on', '', '', 'no');
 
     echo "<style>.rs_list input[type='text'] {width: 400px;}</style>
     <form method='POST' class='rs_list'>
@@ -696,6 +743,17 @@ function rs_settings()
 					</td>
 					<td>
 						<input name='rs_category_path' id='rs_category_path' value='" . get_option('rs_category_path') . "' type='text' />
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<label>
+						<input name='rs_get_tag' id='rs_get_tag' type='checkbox' " . (get_option('rs_get_tag') ? 'checked=\'checked\'' : '') . " />
+						Tag
+						</label>
+					</td>
+					<td>
+						<input name='rs_tag_path' id='rs_tag_path' value='" . get_option('rs_tag_path') . "' type='text' />
 					</td>
 				</tr>
 				<tr>
@@ -775,16 +833,6 @@ function rs_settings()
 					</td>
 				</tr>
 				<tr>
-					<td colspan='2'>
-						<label>
-						<input name='rs_is_checker_on' id='rs_is_checker_on' type='checkbox' " . (get_option('rs_is_checker_on') ? 'checked=\'checked\'' : '') . " />
-						Включить вывод информации в консоль о битых ссылках и картинках при просмотре страниц на востанавливаемом сайте
-						</label>
-					</td>
-				</tr>
-
-				
-				<tr>
 					<td colspan='2'><input name='rs_save_settings' id='rs_save_settings' type='submit' value='Сохранить' /></td>
 				</tr>
 		</tbody>
@@ -836,14 +884,6 @@ function rs_open_url($url)
     return 'не найден домен';
 }
 
-//******************************************************************************************************************************************************
-if (get_option('rs_is_checker_on')) {
-        add_action('wp_footer', 'function_add_checker');
-
-        function function_add_checker() {
-            wp_enqueue_script('add_checker', plugins_url('linksChecker.js', __FILE__));
-        }
-}
 
 //******************************************************************************************************************************************************
 ?>
