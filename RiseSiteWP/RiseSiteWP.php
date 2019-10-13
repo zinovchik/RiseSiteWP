@@ -145,7 +145,7 @@ function rs_rise_post()
                 $start_path = $start_path . $file_name;
                 //чтение создание и запись картинки
                 $handle = fopen($start_path, "w");
-                fwrite($handle, file_get_contents("http://web.archive.org/web/$_POST[rs_version_date]/$_POST[rs_url_page]"));
+                fwrite($handle, file_get_contents("http://web.archive.org/web/$_POST[rs_version_date]if_/$_POST[rs_url_page]"));
                 fclose($handle);
 
                 $start_path = get_site_url() . substr($start_path, 2);
@@ -222,7 +222,7 @@ function rs_rise_post()
             $rs_tag_path = get_option('rs_tag_path');
             $rs_is_localhost = get_option('rs_is_localhost');
 
-            $html = file_get_html("http://web.archive.org/web/$_POST[rs_version_date]/$_POST[rs_url_page]");
+            $html = file_get_html("http://web.archive.org/web/$_POST[rs_version_date]/$_POST[rs_url_page]", false, null, 0);
 
             echo "<form method='post'>";
 
@@ -238,8 +238,8 @@ function rs_rise_post()
                 $rs_slug = str_replace($rs_slug_path, '', $rs_slug);
             }
 
-            $query = "SELECT count(*) as c FROM `wp_posts` WHERE `post_status` = 'publish' AND `post_name` = '$rs_slug' AND `post_type` = 'post'";
-            $rs_message = ($wpdb->get_var($wpdb->prepare($query))) ? "<span class='rs_error'>(Текущий адрес (slug) существует на сайте!!!)</span>" : '';
+            $query = "SELECT count(*) as c FROM `wp_posts` WHERE `post_status` = 'publish' AND `post_name` = %s AND `post_type` = 'post'";
+            $rs_message = ($wpdb->get_var($wpdb->prepare($query, $rs_slug))) ? "<span class='rs_error'>(Текущий адрес (slug) существует на сайте!!!)</span>" : '';
 
             echo "<label>Slug $rs_message<input name='rs_slug' style='display: block;margin: 10px 0;width: 99%; border:1px solid #777;' value='$rs_slug' /></label>";
 
@@ -261,24 +261,26 @@ function rs_rise_post()
                 $e[$category->term_id] = $category->name;
             }
 
+            if($e1) {
+                foreach ($e1 as $value) {
 
-            foreach ($e1 as $value) {
-
-                if (in_array($value, $e)) {
-                    $e = array_flip($e);
-                    $e2[] = $e[$value];
-                    $e = array_flip($e);
-                } else {
-                    $my_cat = array('cat_name' => $value);
-                    // Create the category
-                    echo '<br><span class="rs_ok">* create new category id = ';
-                    echo $e2[] = wp_insert_category($my_cat);
-                    echo ', Name = ' . $value . '</span><br>';
+                    if (in_array($value, $e)) {
+                        $e = array_flip($e);
+                        $e2[] = $e[$value];
+                        $e = array_flip($e);
+                    } else {
+                        $my_cat = array('cat_name' => $value);
+                        // Create the category
+                        echo '<br><span class="rs_ok">* create new category id = ';
+                        echo $e2[] = wp_insert_category($my_cat);
+                        echo ', Name = ' . $value . '</span><br>';
+                    }
                 }
+                $e2 = implode(',', $e2);
+                echo "<label>Category id <input name='rs_category' style='display: block;margin: 10px 0;width: 99%; border:1px solid #777;' value='$e2' /></label>";
+            } else {
+                echo "<label>Category id <input name='rs_category' style='display: block;margin: 10px 0;width: 99%; border:1px solid #777;' value='' /></label>";
             }
-            $e2 = implode(',', $e2);
-            echo "<label>Category id <input name='rs_category' style='display: block;margin: 10px 0;width: 99%; border:1px solid #777;' value='$e2' /></label>";
-
 
 
             //**************
@@ -312,9 +314,13 @@ function rs_rise_post()
 //                    echo ', Name = ' . $value . '</span><br>';
 //                }
 //            }
-            $e2 = implode(',', $tags);
-            echo "<label>Tags <input name='rs_tag' style='display: block;margin: 10px 0;width: 99%; border:1px solid #777;' value='$e2' /></label>";
+            if($e2) {
+                $e2 = implode(',', $tags);
+                echo "<label>Tags <input name='rs_tag' style='display: block;margin: 10px 0;width: 99%; border:1px solid #777;' value='$e2' /></label>";
+            } else {
+                echo "<label>Tags <input name='rs_tag' style='display: block;margin: 10px 0;width: 99%; border:1px solid #777;' value='' /></label>";
 
+            }
             //**************
 
 
@@ -322,15 +328,52 @@ function rs_rise_post()
 
             $rs_content = $html->find($rs_content_path, 0);
 
-            foreach ($rs_content->find('h1.post-title') as $e3) {
+//            foreach ($rs_content->find('h1.post-title') as $e3) {
+//                $e3->outertext = '';
+//                echo '<span class="rs_error">* Удален заголовок!!!</span><br>';
+//            }
+
+            foreach ($rs_content->find('style') as $e3) {
                 $e3->outertext = '';
-                echo '<span class="rs_error">* Удален заголовок!!!</span><br>';
+                echo '<span class="rs_error">* Удален style!!!</span><br>';
             }
 
-            foreach ($rs_content->find('div.meta') as $e3) {
+            foreach ($rs_content->find('script') as $e3) {
                 $e3->outertext = '';
-                echo '<span class="rs_error">* Удален верхний блок!!!</span><br>';
+                echo '<span class="rs_error">* Удален xml!!!</span><br>';
             }
+            foreach ($rs_content->find('noscript') as $e3) {
+                $e3->outertext = '';
+                echo '<span class="rs_error">* Удален noscript!!!</span><br>';
+            }
+            foreach ($rs_content->find('form') as $e3) {
+                $e3->outertext = '';
+                echo '<span class="rs_error">* Удален form!!!</span><br>';
+            }
+            foreach ($rs_content->find('xml') as $e3) {
+                $e3->outertext = '';
+                echo '<span class="rs_error">* Удален xml!!!</span><br>';
+            }
+
+            foreach ($rs_content->find('comment') as $e3) {
+                $e3->outertext = '';
+                echo '<span class="rs_error">* Удален comment!!!</span><br>';
+            }
+
+//            foreach ($rs_content->find('div, p, span, h1, h2, h3, h4, i') as $e3) {
+//                $e3->style = null;
+//                $e3->class = null;
+//                $e3->id = null;
+//                //echo '<span class="rs_error">* Удален attrs!!</span><br>';
+//            }
+
+            foreach ($rs_content->find('div, p, span, h1, h2, h3, h4, i, a') as $e3) {
+                if($e3->onclick){
+                    $e3->onclick = null;
+                    echo '<span class="rs_error">* Удален onclick!!</span><br>';
+                }
+            }
+
 
 
             foreach ($rs_content->find('textarea') as $e3) {
@@ -346,6 +389,7 @@ function rs_rise_post()
                 $rs_tmp = $rs_content_link->href;
 
                 // убираем из ссылки код веб архива
+                $rs_tmp = str_replace("http://web.archive.org/web/$_POST[rs_version_date]/", '', $rs_tmp);
                 $rs_tmp = str_replace("/web/$_POST[rs_version_date]/", '', $rs_tmp);
 
                 // если сайт локально востанавливаем, то добавляем localhost
@@ -388,6 +432,7 @@ function rs_rise_post()
                 $rs_tmp = $rs_content_img->src;
 
                 // убираем из ссылки код веб архива
+                $rs_tmp = str_replace("http://web.archive.org/web/$_POST[rs_version_date]im_/", '', $rs_tmp);
                 $rs_tmp = str_replace("/web/$_POST[rs_version_date]im_/", '', $rs_tmp);
 
                 // если сайт локально востанавливаем, то добавляем localhost
@@ -435,6 +480,7 @@ function rs_rise_post()
             //rise_links("/web/$_POST[rs_version_date]/", "ссылки на странице исправлены", $html);
 
             //--поиск и исправление адресов картинок
+            rise_links("http://web.archive.org/web/$_POST[rs_version_date]im_/", "адреса картинок исправлены", $html);
             rise_links("/web/$_POST[rs_version_date]im_/", "адреса картинок исправлены", $html);
 
             //--поиск и исправление адресов js файлов
@@ -488,14 +534,16 @@ function rs_rise_post()
             'menu_order' => 0, // положение пункта в меню
             'post_date' => $np['post_date'], //Дата создания поста.
             'post_date_gmt' => $np['post_date_gmt'], //Дата создания поста по Гринвичу.
-            'post_category' => $np['post_category'] //Добавление ID категорий.
+            'post_category' => $np['post_category'], //Добавление ID категорий.
+//            'post_parent'    => 7,
         ));
 
         if ($rs_id) {
             if($_POST['rs_tag']) {
                 wp_set_post_tags($rs_id, $_POST['rs_tag'], true);
             }
-            wp_redirect(get_site_url() . "/wp-admin/post.php?post=$rs_id&action=edit");
+            echo '<script> window.location = "/wp-admin/post.php?post='.$rs_id.'&action=edit"; </script>';
+//            wp_redirect(get_site_url() . "/wp-admin/post.php?post=$rs_id&action=edit");
             exit;
         } else {
             echo '<div id="setting-error-settings_updated" class="updated settings-error"><p><b>Error</b></p></div>';
@@ -605,7 +653,7 @@ function rs_rise_post()
                                 <a style='<?php echo is_set_slug($key, $slug_array); ?>'
                                    href="http://web.archive.org/web/*/<?= $rs_domain_name . '/' . $key ?>"
                                    target="_blank"><?php echo $key; ?></a>
-                                (<a style='color:grey;' href="http://<? echo $rs_is_localhost ? 'localhost/'.$rs_domain_name. '/' . $key : $rs_domain_name. '/' . $key ?>"
+                                (<a style='color:grey;' href="http://<? echo $rs_is_localhost ? 'localhost/'.$rs_domain_name. '/' . $key : 'www.'.$rs_domain_name. '/' . $key ?>"
                                     target="_blank">На сайте</a>)
 
                             </td>
@@ -683,8 +731,8 @@ function rs_settings()
 				<tr>
 					<td>
 						<label>
-						Домен 				
-						</label>			
+						Домен
+						</label>
 					</td>
 					<td>
 						<input name='rs_domain_name' id='rs_domain_name' value='" . get_option('rs_domain_name') . "' type='text' />
@@ -694,8 +742,8 @@ function rs_settings()
 					<td>
 						<label>
 						<input name='rs_get_title' id='rs_get_title' type='checkbox' " . (get_option('rs_get_title') ? 'checked=\'checked\'' : '') . " />
-						Title 				
-						</label>			
+						Title
+						</label>
 					</td>
 					<td>
 						<input name='rs_title_path' id='rs_title_path' value='" . get_option('rs_title_path') . "' type='text' />
@@ -706,7 +754,7 @@ function rs_settings()
 						<label>
 						<input name='rs_get_slug' id='rs_get_slug' type='checkbox' " . (get_option('rs_get_slug') ? 'checked=\'checked\'' : '') . " />
 						Slug (what dell)
-						</label>			
+						</label>
 					</td>
 					<td>
 						<input name='rs_slug_path' id='rs_slug_path' value='" . get_option('rs_slug_path') . "' type='text' />
@@ -717,7 +765,7 @@ function rs_settings()
 						<label>
 						<input name='rs_get_date' id='rs_get_date' type='checkbox' " . (get_option('rs_get_date') ? 'checked=\'checked\'' : '') . " />
 						Date
-						</label>			
+						</label>
 					</td>
 					<td>
 						<input name='rs_date_path' id='rs_date_path' value='" . get_option('rs_date_path') . "' type='text' />
@@ -727,8 +775,8 @@ function rs_settings()
 					<td>
 						<label>
 						<input name='rs_get_content' id='rs_get_content' type='checkbox' " . (get_option('rs_get_content') ? 'checked=\'checked\'' : '') . " />
-						Content 				
-						</label>			
+						Content
+						</label>
 					</td>
 					<td>
 						<input name='rs_content_path' id='rs_content_path' value='" . get_option('rs_content_path') . "' type='text' />
@@ -738,8 +786,8 @@ function rs_settings()
 					<td>
 						<label>
 						<input name='rs_get_category' id='rs_get_category' type='checkbox' " . (get_option('rs_get_category') ? 'checked=\'checked\'' : '') . " />
-						Category 				
-						</label>			
+						Category
+						</label>
 					</td>
 					<td>
 						<input name='rs_category_path' id='rs_category_path' value='" . get_option('rs_category_path') . "' type='text' />
@@ -760,8 +808,8 @@ function rs_settings()
 					<td colspan='2'>
 						<label>
 						<input name='rs_del_get_parameter' id='rs_del_get_parameter' type='checkbox' " . (get_option('rs_del_get_parameter') ? 'checked=\'checked\'' : '') . " />
-						Удалить GET переменные из URL 				
-						</label>			
+						Удалить GET переменные из URL
+						</label>
 					</td>
 				</tr>
 				<tr>
@@ -852,7 +900,7 @@ function rise_links($search_text, $message, &$page)
 }
 
 //******************************************************************************************************************************************************
-// Проверяет есть ли указаный slug в базе 
+// Проверяет есть ли указаный slug в базе
 function is_set_slug($value, &$slug_array)
 {   //$rs_slug_path = $rs_get_slug ? $rs_slug_path : '';
 
